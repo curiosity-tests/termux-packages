@@ -37,7 +37,7 @@ termux_step_post_configure() {
 		patch --silent -p1 <"$f"
 	done
 
-	echo "packages: splitmix" >>cabal.project.local
+	echo "packages: splitmix basement" >>cabal.project.local
 
 	if [[ "$TERMUX_ON_DEVICE_BUILD" == false ]]; then # We do not need iserv for on device builds.
 		termux_setup_ghc_iserv
