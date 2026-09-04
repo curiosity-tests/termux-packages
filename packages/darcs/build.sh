@@ -7,7 +7,7 @@ TERMUX_PKG_SRCURL="https://hackage.haskell.org/package/darcs-${TERMUX_PKG_VERSIO
 TERMUX_PKG_SHA256=e310692989e313191824f532a26c5eae712217444214266503d5eb5867f951ab
 TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_BUILD_IN_SRC=true
-TERMUX_PKG_DEPENDS="libffi, libiconv, libgmp, libandroid-posix-semaphore, libandroid-utimes, ncurses"
+TERMUX_PKG_DEPENDS="libffi, libiconv, libgmp, libandroid-posix-semaphore, libandroid-utimes, ncurses, zlib"
 TERMUX_PKG_BUILD_DEPENDS="aosp-libs"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--allow-newer=base --allow-newer=Cabal -f+terminfo"
 
