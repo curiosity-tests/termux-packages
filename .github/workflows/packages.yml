@@ -17,26 +17,50 @@ on:
     - 'x11-packages/**'
   workflow_dispatch:
     inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: instrumented
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
       packages:
+        default: libandroid-support
         description: "A space-separated names of packages selected for rebuilding"
-        required: true
+        required: false
       free-space:
         description: "Free space even if not building large package (useful when building a large number of packages)"
         type: boolean
         default: false
 
-permissions: {} # none
+permissions:
+  contents: read
+  id-token: write
 
 concurrency:
   # if this is a PR event, group = "pr-<number>", otherwise group = run_id so it never collides with other runs
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}-${{ inputs.leg || 'push' }}-${{ inputs.racecar_run }}
   # only cancel in-progress when it’s a PR
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
+
+env:
+  # The one variable that separates the arms: on baseline, action-checkout
+  # skips its Set up Chalk step entirely.
+  CHALK_ON: ${{ github.event_name == 'workflow_dispatch' && inputs.leg != 'baseline' }}
+
+run-name: "Packages ${{ inputs.leg || 'push' }} ${{ inputs.racecar_run }}"
 
 jobs:
   build:
     permissions:
       contents: read # actions/upload-artifact doesn't need contents: write
+      id-token: write
     runs-on: ubuntu-26.04
     strategy:
       matrix:
@@ -44,9 +68,18 @@ jobs:
       fail-fast: false
     steps:
     - name: Clone repository
-      uses: actions/checkout@v7
+      uses: crashappsec/action-checkout@main
       with:
+        chalk: ${{ env.CHALK_ON }}
+        profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
+        observables_continue_on_error: false
+        lfs: false
         fetch-depth: 1000
+    - name: Assert instrumentation is live
+      if: env.CHALK_ON == 'true'
+      run: |
+        test -n "${CURIOSITY_ROOT:-}" || { echo "::error::CURIOSITY_ROOT unset - observables never installed"; exit 1; }
+        test -S "${CURIOSITY_SOCKET_NAME:?socket name unset}" || { echo "::error::co-hostd socket absent"; exit 1; }
 
     - name: Gather build summary
       id: build-info
@@ -342,10 +375,22 @@ jobs:
   test-buildorder-random:
     permissions:
       contents: read
-    runs-on: ubuntu-slim
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
     - name: Clone repository
-      uses: actions/checkout@v7
+      uses: crashappsec/action-checkout@main
+      with:
+        chalk: ${{ env.CHALK_ON }}
+        profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
+        observables_continue_on_error: false
+        lfs: false
+    - name: Assert instrumentation is live
+      if: env.CHALK_ON == 'true'
+      run: |
+        test -n "${CURIOSITY_ROOT:-}" || { echo "::error::CURIOSITY_ROOT unset - observables never installed"; exit 1; }
+        test -S "${CURIOSITY_SOCKET_NAME:?socket name unset}" || { echo "::error::co-hostd socket absent"; exit 1; }
+
     - name: Randomise buildorder.py test
       run: ./scripts/bin/test-buildorder-random
     - name: Randomise buildorder.py test (aarch64)
@@ -368,12 +413,24 @@ jobs:
   upload-test:
     permissions:
       contents: read
+      id-token: write
     if: github.repository == 'termux/termux-packages' && github.ref != 'refs/heads/master'
     needs: build
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     steps:
     - name: Clone repository
-      uses: actions/checkout@v7
+      uses: crashappsec/action-checkout@main
+      with:
+        chalk: ${{ env.CHALK_ON }}
+        profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
+        observables_continue_on_error: false
+        lfs: false
+    - name: Assert instrumentation is live
+      if: env.CHALK_ON == 'true'
+      run: |
+        test -n "${CURIOSITY_ROOT:-}" || { echo "::error::CURIOSITY_ROOT unset - observables never installed"; exit 1; }
+        test -S "${CURIOSITY_SOCKET_NAME:?socket name unset}" || { echo "::error::co-hostd socket absent"; exit 1; }
+
     - name: Get *.deb files
       uses: actions/download-artifact@v7
       with:
@@ -435,12 +492,24 @@ jobs:
     concurrency: ${{ github.workflow }}
     permissions:
       contents: read
+      id-token: write
     if: github.repository == 'termux/termux-packages' && github.ref == 'refs/heads/master'
     needs: build
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     steps:
     - name: Clone repository
-      uses: actions/checkout@v7
+      uses: crashappsec/action-checkout@main
+      with:
+        chalk: ${{ env.CHALK_ON }}
+        profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
+        observables_continue_on_error: false
+        lfs: false
+    - name: Assert instrumentation is live
+      if: env.CHALK_ON == 'true'
+      run: |
+        test -n "${CURIOSITY_ROOT:-}" || { echo "::error::CURIOSITY_ROOT unset - observables never installed"; exit 1; }
+        test -S "${CURIOSITY_SOCKET_NAME:?socket name unset}" || { echo "::error::co-hostd socket absent"; exit 1; }
+
     - name: Get *.deb files
       uses: actions/download-artifact@v7
       with:
