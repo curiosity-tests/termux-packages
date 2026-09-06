@@ -414,7 +414,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    if: github.repository == 'curiosity-tests/termux-packages' && github.ref != 'refs/heads/master'
+    if: github.repository == 'termux/termux-packages' && github.ref != 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -493,7 +493,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    if: github.repository == 'curiosity-tests/termux-packages' && github.ref == 'refs/heads/master'
+    if: github.repository == 'termux/termux-packages' && github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     steps:
